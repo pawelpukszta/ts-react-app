@@ -1,29 +1,44 @@
 import { useState } from 'react';
 import { useQuery } from 'react-query';
-
+import AppBar from '@material-ui/core/AppBar';
+import CssBaseline from '@material-ui/core/CssBaseline';
+import Toolbar from '@material-ui/core/Toolbar';
+import IconButton from '@material-ui/core/IconButton';
 import Drawer from '@material-ui/core/Drawer';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import AddShoppingCartIcon from '@material-ui/icons/AddShoppingCart';
 import Grid from '@material-ui/core/Grid';
 import Badge from '@material-ui/core/Badge';
+import { makeStyles } from '@material-ui/core/styles';
 
 import Item from './Item/Item';
 import Cart from './Cart/Cart';
 
+import { useToggle } from './hooks/useToggle';
 import { CartItemType } from './types/CartItemTypes';
-import { Wrapper, StyledButton } from './styled/App.styles';
+import { Wrapper } from './styled/App.styles';
+
+const useStyles = makeStyles(theme => ({
+  appBar: {
+    zIndex: theme.zIndex.modal + 1,
+  },
+  toolbar: theme.mixins.toolbar,
+  grow: {
+    flexGrow: 1,
+  },
+}));
 
 const getProducts = async (): Promise<CartItemType[]> =>
   await (await fetch('https://fakestoreapi.com/products')).json();
 
 const App = () => {
-  const [ cartIsOpen, setCartIsOpen ] = useState(false);
+  const classes = useStyles();
+  const [ cartIsOpen, showCartIsOpen ] = useToggle();
   const [ cartItems, setCartItems ] = useState([] as CartItemType[]);
   const { data, isLoading, error } = useQuery<CartItemType[]>(
     'products',
     getProducts
   );
-  console.log(data);
 
   const getTotalItems = (items: CartItemType[]) =>
     items.reduce((ack: number, item) => ack + item.amount, 0);
@@ -63,21 +78,31 @@ const App = () => {
 
   return (
     <Wrapper>
-      <Drawer anchor='right' open={ cartIsOpen } onClose={ () => setCartIsOpen(false) }>
+      <CssBaseline />
+      <AppBar position="fixed" className={ classes.appBar } color="primary">
+        <Toolbar>
+          <div className={ classes.grow } />
+          <IconButton edge="end" onClick={ showCartIsOpen } aria-label="Shopping cart">
+            <Badge badgeContent={ getTotalItems(cartItems) } color='error'>
+              <AddShoppingCartIcon />
+            </Badge>
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+      <Toolbar />
+      <Drawer variant="temporary" anchor='right' open={ cartIsOpen } onClose={ showCartIsOpen }>
+        <div className={ classes.toolbar } />
         <Cart
           cartItems={ cartItems }
           addToCart={ handleAddToCart }
           removeFromCart={ handleRemoveFromCart }
+          showCartIsOpen={ showCartIsOpen }
         />
       </Drawer>
-      <StyledButton onClick={ () => setCartIsOpen(true) }>
-        <Badge badgeContent={ getTotalItems(cartItems) } color='error'>
-          <AddShoppingCartIcon />
-        </Badge>
-      </StyledButton>
-      <Grid container spacing={ 3 }>
+
+      <Grid container spacing={ 1 }>
         { data?.map(item => (
-          <Grid item key={ item.id } xs={ 12 } sm={ 4 }>
+          <Grid item key={ item.id } xs={ 12 } sm={ 3 }>
             <Item item={ item } handleAddToCart={ handleAddToCart } />
           </Grid>
         )) }
